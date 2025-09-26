@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 // GET /api/leaders - Lấy danh sách tất cả leaders
 export async function GET() {
   try {
-    const leaders = (global as any).db.getLeaders();
+    const leaders = global.db.getLeaders();
     return NextResponse.json({ success: true, data: leaders });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Có lỗi khi lấy danh sách leaders' },
       { status: 500 }
@@ -26,13 +26,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newLeader = (global as any).db.registerLeader(name.trim());
+    const newLeader = global.db.registerLeader(name.trim());
     
     // Broadcast update via WebSocket
-    (global as any).db.broadcastAllData();
+    global.db.broadcastAllData();
     
     return NextResponse.json({ success: true, data: newLeader });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Có lỗi khi đăng ký leader' },
       { status: 500 }

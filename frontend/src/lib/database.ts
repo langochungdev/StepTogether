@@ -1,9 +1,20 @@
 import { Leader, Part, TodoItem } from './data';
 import WebSocket from 'ws';
 
-// Extend global interface for broadcastUpdate
+// Extend global interface for database and broadcastUpdate
 declare global {
   var broadcastUpdate: ((type: string, data: unknown) => void) | undefined;
+  var db: {
+    getLeaders(): Leader[];
+    registerLeader(name: string): Leader;
+    completeLeader(id: string): Leader | null;
+    deleteLeader(id: string): Leader | null;
+    toggleLeaderHelp(id: string, needsHelp: boolean): Leader | null;
+    toggleLeaderTodo(id: string, todoId: string): Leader | null;
+    getParts(): Part[];
+    getActivePart(): Part | null;
+    broadcastAllData(): void;
+  };
 }
 
 // In-memory database
