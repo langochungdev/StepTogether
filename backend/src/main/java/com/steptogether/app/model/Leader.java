@@ -1,8 +1,10 @@
 package com.steptogether.app.model;
 
-import com.google.cloud.Timestamp;
 import lombok.*;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -13,31 +15,32 @@ import java.util.UUID;
 public class Leader {
     private String id;
     private String name;
-    private String status; // PENDING | DONE
     private boolean needsHelp;
-    private TodoProgress todoProgress;
-    private Timestamp createdAt;
-    private Timestamp completedAt;
-    private Timestamp helpRequestedAt;
-
-    @Getter
-    @Setter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class TodoProgress {
-        private int completed;
-        private int total;
-    }
+    private boolean completed;
+    private String createdAt;
+    private List<Todo> todoList;
 
     public static Leader newLeader(String name) {
         return Leader.builder()
                 .id(UUID.randomUUID().toString())
                 .name(name)
-                .status("PENDING")
                 .needsHelp(false)
-                .todoProgress(TodoProgress.builder().completed(0).total(0).build())
-                .createdAt(Timestamp.now())   // ✅ dùng Timestamp thay vì Instant
+                .completed(false)
+                .todoList(new ArrayList<>())
+                .createdAt(Instant.now().toString())
                 .build();
+    }
+
+    // Ensure todoList is never null
+    public List<Todo> getTodoList() {
+        if (todoList == null) {
+            todoList = new ArrayList<>();
+        }
+        return todoList;
+    }
+    
+    // Override setter to ensure it's never set to null
+    public void setTodoList(List<Todo> todoList) {
+        this.todoList = todoList != null ? todoList : new ArrayList<>();
     }
 }

@@ -1,10 +1,10 @@
 package com.steptogether.app.dto.response;
 
+import com.steptogether.app.model.Todo;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.Instant;
 import java.util.List;
 
 @Getter
@@ -14,7 +14,7 @@ public class PartResponse {
     private String id;
     private String name;
     private String description;
-    private boolean isActive;
-    private List<TodoResponse> todoList;
-    private Instant createdAt;
+    private boolean active;
+    private List<Todo> todoList;
+    private String createdAt;
 }

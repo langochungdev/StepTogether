@@ -1,8 +1,8 @@
 package com.steptogether.app.model;
 
-import com.google.cloud.Timestamp;
 import lombok.*;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Getter
@@ -15,7 +15,7 @@ public class Todo {
     private String title;
     private String description;
     private boolean completed;
-    private Timestamp createdAt;   // ✅ thay Instant bằng Timestamp
+    private String createdAt;
 
     public static Todo newTodo(String title, String description) {
         return Todo.builder()
@@ -23,7 +23,7 @@ public class Todo {
                 .title(title)
                 .description(description)
                 .completed(false)
-                .createdAt(Timestamp.now())   // ✅ dùng Timestamp
+                .createdAt(Instant.now().toString())
                 .build();
     }
 }

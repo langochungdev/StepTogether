@@ -16,14 +16,9 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
-    @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ApiResponse<Object>> handleConflict(ConflictException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(ex.getMessage()));
-    }
 
-    @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ApiResponse<Object>> handleBadRequest(BadRequestException ex) {
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleValidation(ValidationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ex.getMessage()));
     }

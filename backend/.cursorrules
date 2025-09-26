@@ -1,0 +1,158 @@
+# Cursor Rules cho dự án StepTogether Backend
+
+project:
+  name: steptogether-backend
+  type: spring-boot
+  language: java
+  build: maven
+  javaVersion: 21
+
+structure:
+  root:
+    - pom.xml
+    - src/main/java/com/steptogether/app/SteptogetherApplication.java
+    - src/main/java/com/steptogether/app/config/
+      - FirebaseConfig.java
+      - WebSocketConfig.java
+      - CorsConfig.java
+    - src/main/java/com/steptogether/app/controller/
+      - LeaderController.java
+      - PartController.java
+      - SystemController.java
+    - src/main/java/com/steptogether/app/service/
+      - LeaderService.java
+      - PartService.java
+      - SystemService.java
+      - FirebaseService.java
+      - RealtimeDataService.java
+      - CacheService.java
+    - src/main/java/com/steptogether/app/dto/request/
+      - LeaderRegisterRequest.java
+      - PartCreateRequest.java
+      - PartUpdateRequest.java
+    - src/main/java/com/steptogether/app/dto/response/
+      - ApiResponse.java
+      - TodoToggleResponse.java
+      - SystemStats.java
+    - src/main/java/com/steptogether/app/model/
+      - Leader.java
+      - Part.java
+      - Todo.java
+    - src/main/java/com/steptogether/app/exception/
+      - GlobalExceptionHandler.java
+      - ResourceNotFoundException.java
+      - ValidationException.java
+    - src/main/java/com/steptogether/app/websocket/
+      - WebSocketEventPublisher.java
+      - WebSocketEventType.java
+    - src/main/resources/
+      - application.yml
+      - firebase-service-account.json (ignored in .gitignore)
+    - src/test/java/com/steptogether/app/
+      - LeaderServiceTest.java
+      - PartServiceTest.java
+      - SystemServiceTest.java
+
+database:
+  type: firebase-realtime
+  schema:
+    leaders:
+      id: string
+      name: string
+      needsHelp: boolean
+      completed: boolean
+      createdAt: timestamp
+      todoList: array<Todo>
+    parts:
+      id: string
+      name: string
+      description: string
+      active: boolean
+      createdAt: timestamp
+      todoList: array<Todo>
+    system:
+      activePart: partId
+      stats:
+        totalLeaders: number
+        completedLeaders: number
+
+api:
+  leaders:
+    base: /api/leaders
+    endpoints:
+      - GET /api/leaders → ApiResponse<List<Leader>>
+      - POST /api/leaders/register {name} → ApiResponse<Leader>
+      - POST /api/leaders/{id}/complete → ApiResponse<Leader>
+      - POST /api/leaders/{id}/help {needsHelp} → ApiResponse<Leader>
+      - DELETE /api/leaders/{id} → ApiResponse<String>
+      - POST /api/leaders/{leaderId}/todos/{todoId}/toggle → ApiResponse<TodoToggleResponse>
+  parts:
+    base: /api/parts
+    endpoints:
+      - GET /api/parts → ApiResponse<List<Part>>
+      - GET /api/parts/active → ApiResponse<Part>
+      - POST /api/parts {PartCreateRequest} → ApiResponse<Part>
+      - PUT /api/parts/{id} {PartUpdateRequest} → ApiResponse<Part>
+      - DELETE /api/parts/{id} → ApiResponse<String>
+      - POST /api/parts/{id}/activate → ApiResponse<Part>
+      - POST /api/parts/{partId}/todos/{todoId}/toggle → ApiResponse<Part>
+  system:
+    base: /api/system
+    endpoints:
+      - POST /api/system/reset → ApiResponse<String>
+      - GET /api/system/stats → ApiResponse<SystemStats>
+
+websocket:
+  endpoint: /ws/updates
+  topics:
+    - /topic/leaders
+    - /topic/parts
+    - /topic/system
+  events:
+    - LEADER_REGISTERED → Leader
+    - LEADER_COMPLETED → Leader
+    - LEADER_NEEDS_HELP → Leader
+    - LEADER_DELETED → {id}
+    - PART_ACTIVATED → Part
+    - PART_CREATED → Part
+    - PART_UPDATED → Part
+    - PART_DELETED → {id}
+    - TODO_TOGGLED → {partId, todoId, completed}
+    - SYSTEM_RESET → {}
+
+validation:
+  leader:
+    name: min 2, max 50
+  part:
+    name: min 2, max 100
+    description: min 5, max 500
+  todo:
+    title: min 1, max 100
+    description: optional, max 300
+
+errorHandling:
+  statusCodes:
+    - 200 Success
+    - 201 Created
+    - 400 Bad Request
+    - 404 Not Found
+    - 409 Conflict
+    - 500 Internal Server Error
+  format:
+    success: boolean
+    data: nullable
+    error: string
+
+configuration:
+  application.yml:
+    firebase:
+      database-url: ${FIREBASE_URL}
+      service-account: ${FIREBASE_KEY_PATH}
+    websocket:
+      allowed-origins: ${FRONTEND_URL}
+    cors:
+      allowed-origins: ${FRONTEND_URL}
+  environment:
+    - FIREBASE_URL
+    - FIREBASE_KEY_PATH
+    - FRONTEND_URL

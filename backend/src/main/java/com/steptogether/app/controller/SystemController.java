@@ -1,32 +1,29 @@
 package com.steptogether.app.controller;
 
 import com.steptogether.app.dto.response.ApiResponse;
-import com.steptogether.app.model.Leader;
+import com.steptogether.app.dto.response.SystemStats;
 import com.steptogether.app.service.SystemService;
-import com.steptogether.app.websocket.UpdateEventPublisher;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/system")
 public class SystemController {
 
-    private final SystemService systemService;
-    private final UpdateEventPublisher publisher;
-
-    public SystemController(SystemService systemService, UpdateEventPublisher publisher) {
-        this.systemService = systemService;
-        this.publisher = publisher;
-    }
+    @Autowired
+    private SystemService systemService;
 
     @PostMapping("/reset")
-    public ResponseEntity<ApiResponse<List<Leader>>> resetSystem()
-            throws ExecutionException, InterruptedException {
-        List<Leader> leaders = systemService.resetAllLeaders();
-        publisher.publish("SYSTEM_RESET", leaders);
-        return ResponseEntity.ok(ApiResponse.success(leaders));
+    public CompletableFuture<ApiResponse<String>> resetSystem() {
+        return systemService.resetSystem()
+            .thenApply(v -> ApiResponse.success("Hệ thống đã được reset"));
+    }
+
+    @GetMapping("/stats")
+    public CompletableFuture<ApiResponse<SystemStats>> getSystemStats() {
+        return systemService.getSystemStats()
+            .thenApply(ApiResponse::success);
     }
 }

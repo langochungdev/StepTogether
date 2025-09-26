@@ -2,65 +2,59 @@ package com.steptogether.app.controller;
 
 import com.steptogether.app.dto.request.LeaderRegisterRequest;
 import com.steptogether.app.dto.response.ApiResponse;
+import com.steptogether.app.dto.response.TodoToggleResponse;
 import com.steptogether.app.model.Leader;
 import com.steptogether.app.service.LeaderService;
-import com.steptogether.app.websocket.UpdateEventPublisher;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletableFuture;
 
 @RestController
 @RequestMapping("/api/leaders")
 public class LeaderController {
 
-    private final LeaderService leaderService;
-    private final UpdateEventPublisher publisher;
-
-    public LeaderController(LeaderService leaderService, UpdateEventPublisher publisher) {
-        this.leaderService = leaderService;
-        this.publisher = publisher;
-    }
+    @Autowired
+    private LeaderService leaderService;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<Leader>> registerLeader(@Valid @RequestBody LeaderRegisterRequest request)
-            throws ExecutionException, InterruptedException {
-        Leader leader = leaderService.registerLeader(request.getName());
-        publisher.publish("LEADER_REGISTERED", leader);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(leader));
+    public CompletableFuture<ApiResponse<Leader>> registerLeader(@Valid @RequestBody LeaderRegisterRequest request) {
+        return leaderService.registerLeader(request.getName())
+            .thenApply(ApiResponse::success);
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Leader>>> getAllLeaders()
-            throws ExecutionException, InterruptedException {
-        return ResponseEntity.ok(ApiResponse.success(leaderService.getAllLeaders()));
+    public CompletableFuture<ApiResponse<List<Leader>>> getAllLeaders() {
+        return leaderService.getAllLeaders()
+            .thenApply(ApiResponse::success);
     }
 
+
     @PostMapping("/{id}/complete")
-    public ResponseEntity<ApiResponse<Leader>> completeLeader(@PathVariable String id)
-            throws ExecutionException, InterruptedException {
-        Leader leader = leaderService.completeLeader(id);
-        publisher.publish("LEADER_COMPLETED", leader);
-        return ResponseEntity.ok(ApiResponse.success(leader));
+    public CompletableFuture<ApiResponse<Leader>> completeLeader(@PathVariable String id) {
+        return leaderService.completeLeader(id)
+            .thenApply(ApiResponse::success);
     }
 
     @PostMapping("/{id}/help")
-    public ResponseEntity<ApiResponse<Leader>> requestHelp(@PathVariable String id)
-            throws ExecutionException, InterruptedException {
-        Leader leader = leaderService.requestHelp(id);
-        publisher.publish("LEADER_NEEDS_HELP", leader);
-        return ResponseEntity.ok(ApiResponse.success(leader));
+    public CompletableFuture<ApiResponse<Leader>> toggleHelp(@PathVariable String id, 
+                                                            @RequestParam boolean needsHelp) {
+        return leaderService.toggleHelp(id, needsHelp)
+            .thenApply(ApiResponse::success);
+    }
+
+    @PostMapping("/{leaderId}/todos/{todoId}/toggle")
+    public CompletableFuture<ApiResponse<TodoToggleResponse>> toggleTodo(@PathVariable String leaderId, 
+                                                                        @PathVariable String todoId) {
+        return leaderService.toggleTodo(leaderId, todoId)
+            .thenApply(ApiResponse::success);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteLeader(@PathVariable String id)
-            throws ExecutionException, InterruptedException {
-        leaderService.deleteLeader(id);
-        publisher.publish("LEADER_DELETED", Map.of("id", id));
-        return ResponseEntity.ok(ApiResponse.success("Leader đã được xóa"));
+    public CompletableFuture<ApiResponse<String>> deleteLeader(@PathVariable String id) {
+        return leaderService.deleteLeader(id)
+            .thenApply(v -> ApiResponse.success("Leader đã được xóa"));
     }
 }
