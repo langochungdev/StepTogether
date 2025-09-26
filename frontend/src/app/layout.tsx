@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
+import CursorEffects from "../components/CursorEffects";
 
 export const metadata: Metadata = {
   title: "StepTogether",
@@ -13,8 +15,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi">
-      <body className="min-h-screen bg-gray-100 text-gray-900">
-        <main className="container mx-auto p-4">{children}</main>
+      <body className="min-h-screen bg-gray-900 text-white">
+        <Script
+          src="https://unpkg.com/cursor-effects@latest/dist/browser.js"
+          strategy="afterInteractive"
+        />
+        <CursorEffects />
+        <main>{children}</main>
       </body>
     </html>
   );
