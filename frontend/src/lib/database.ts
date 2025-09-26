@@ -1,4 +1,10 @@
 import { Leader, Part, TodoItem } from './data';
+import WebSocket from 'ws';
+
+// Extend global interface for broadcastUpdate
+declare global {
+  var broadcastUpdate: ((type: string, data: unknown) => void) | undefined;
+}
 
 // In-memory database
 class Database {
@@ -186,15 +192,15 @@ class Database {
   }
 
   // WebSocket methods
-  addWebSocketClient(ws: any): void {
+  addWebSocketClient(ws: WebSocket): void {
     this.wsClients.add(ws);
   }
 
-  removeWebSocketClient(ws: any): void {
+  removeWebSocketClient(ws: WebSocket): void {
     this.wsClients.delete(ws);
   }
 
-  broadcastUpdate(type: string, data: any): void {
+  broadcastUpdate(type: string, data: unknown): void {
     // Use global broadcast function if available (for server.js)
     if (typeof global !== 'undefined' && global.broadcastUpdate) {
       global.broadcastUpdate(type, data);

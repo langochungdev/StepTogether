@@ -2,13 +2,8 @@
 
 import { useState } from 'react';
 import { resetSystem } from '../lib/api';
-import { Leader } from '../lib/data';
 
-interface ResetButtonProps {
-  onReset: (leaders: Leader[]) => void;
-}
-
-export default function ResetButton({ onReset }: ResetButtonProps) {
+export default function ResetButton() {
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState('');

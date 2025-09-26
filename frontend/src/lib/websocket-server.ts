@@ -16,7 +16,7 @@ export function startWebSocketServer(port: number = 8081) {
     console.log('WebSocket client connected');
     
     // Add client to database
-    db.addWebSocketClient(ws as any);
+    db.addWebSocketClient(ws);
     
     // Send initial data
     const leaders = db.getLeaders();
@@ -31,12 +31,12 @@ export function startWebSocketServer(port: number = 8081) {
 
     ws.on('close', () => {
       console.log('WebSocket client disconnected');
-      db.removeWebSocketClient(ws as any);
+      db.removeWebSocketClient(ws);
     });
 
     ws.on('error', (error) => {
       console.error('WebSocket error:', error);
-      db.removeWebSocketClient(ws as any);
+      db.removeWebSocketClient(ws);
     });
   });
 

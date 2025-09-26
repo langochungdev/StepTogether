@@ -62,10 +62,6 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const handleReset = (updatedLeaders: Leader[]) => {
-    setLeaders(updatedLeaders);
-  };
-
   const handlePartActivated = (part: Part) => {
     console.log('Part activated:', part.name);
     // Có thể gửi event ngược lên server nếu cần:
@@ -121,7 +117,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex justify-center space-x-4">
-            <ResetButton onReset={handleReset} />
+            <ResetButton />
             
             <a
               href="/leader"
