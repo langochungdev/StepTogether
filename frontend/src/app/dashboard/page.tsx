@@ -6,8 +6,7 @@ import ResetButton from '../../components/ResetButton';
 import PartManagerAdvanced from '../../components/PartManagerAdvanced';
 import { Leader, Part } from '../../lib/data';
 import { getLeaders, getParts, getActivePart } from '../../lib/api';
-import SockJS from 'sockjs-client';
-import { Client } from '@stomp/stompjs';
+import { WebSocketClient } from '../../lib/websocket-client';
 
 export default function DashboardPage() {
   const [leaders, setLeaders] = useState<Leader[]>([]);
@@ -40,72 +39,26 @@ export default function DashboardPage() {
 
     loadData();
 
-    // Try to setup WebSocket (optional)
-    const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws/updates'),
-      debug: (str) => console.log('STOMP:', str),
-      onConnect: () => {
-        console.log('✅ STOMP connected');
-
-        // Subscribe to topics
-        client.subscribe('/topic/leaders', (message) => {
-          try {
-            console.log('📥 Received leaders WebSocket message:', message.body);
-            const data = JSON.parse(message.body);
-            if (Array.isArray(data)) {
-              console.log('✅ Setting leaders data:', data);
-              setLeaders(data);
-            } else {
-              console.warn('Leaders data is not an array:', data);
-            }
-          } catch (err) {
-            console.error('Error parsing leaders message:', err);
-          }
-        });
-
-        client.subscribe('/topic/parts', (message) => {
-          try {
-            console.log('📥 Received parts WebSocket message:', message.body);
-            console.log('📥 Message type:', typeof message.body);
-            const partsData = JSON.parse(message.body);
-            console.log('📥 Parsed data:', partsData);
-            console.log('📥 Is array?', Array.isArray(partsData));
-            if (Array.isArray(partsData)) {
-              console.log('✅ Setting parts data:', partsData);
-              setParts(partsData);
-              const activePartFound = partsData.find((p: Part) => p.active);
-              console.log('✅ Active part found:', activePartFound);
-              setActivePart(activePartFound || null);
-            } else {
-              console.warn('❌ Parts data is not an array:', partsData);
-            }
-          } catch (err) {
-            console.error('❌ Error parsing parts message:', err);
-          }
-        });
-
-        client.subscribe('/topic/system', (message) => {
-          try {
-            const data = JSON.parse(message.body);
-            console.log('System update:', data);
-          } catch (err) {
-            console.error('Error parsing system message:', err);
-          }
-        });
+    // Setup WebSocket connection
+    const wsClient = new WebSocketClient(
+      (leaders) => {
+        console.log('📥 Received leaders update:', leaders);
+        setLeaders(leaders);
       },
-      onStompError: (frame) => {
-        console.error('STOMP error:', frame);
-        // Don't set error state for WebSocket failures
+      (parts) => {
+        console.log('📥 Received parts update:', parts);
+        setParts(parts);
       },
-      onWebSocketClose: () => {
-        console.log('❌ WebSocket disconnected');
+      (activePart) => {
+        console.log('📥 Received active part update:', activePart);
+        setActivePart(activePart);
       }
-    });
+    );
 
-    client.activate();
+    wsClient.connect();
 
     return () => {
-      client.deactivate();
+      wsClient.disconnect();
     };
   }, []);
 

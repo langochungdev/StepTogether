@@ -1,6 +1,6 @@
 import { Leader, Part, TodoItem } from './data';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) {
@@ -39,7 +39,7 @@ export async function getLeaders(): Promise<Leader[]> {
 }
 
 export async function registerLeader(name: string): Promise<Leader> {
-  const response = await apiCall<{ success: boolean; data: Leader }>('/leaders/register', {
+  const response = await apiCall<{ success: boolean; data: Leader }>('/leaders', {
     method: 'POST',
     body: JSON.stringify({ name }),
   });

@@ -22,7 +22,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // endpoint cho websocket handshake
         registry.addEndpoint("/ws/updates")
-                .setAllowedOriginPatterns("*")
-                .withSockJS();
+                .setAllowedOriginPatterns("http://localhost:3000", "https://step-together.vercel.app");
     }
 }

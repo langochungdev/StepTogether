@@ -8,8 +8,7 @@ import HelpButton from '../../components/HelpButton';
 import TodoList from '../../components/TodoList';
 import { toggleTodoCompletion, getLeaders, getActivePart } from '../../lib/api';
 import { Leader, Part } from '../../lib/data';
-import SockJS from 'sockjs-client';
-import { Client } from '@stomp/stompjs';
+import { WebSocketClient } from '../../lib/websocket-client';
 
 function LeaderPageContent() {
   const [currentLeader, setCurrentLeader] = useState<Leader | null>(null);
@@ -60,67 +59,42 @@ function LeaderPageContent() {
 
     loadData();
 
-    // Try to setup WebSocket (optional)
-    const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws/updates'),
-      debug: (str) => console.log('STOMP:', str),
-      onConnect: () => {
-        console.log('✅ STOMP connected');
-
-        // Subscribe to topics
-        client.subscribe('/topic/leaders', (message) => {
-          try {
-            const leadersData = JSON.parse(message.body);
-            // Find current leader by name from URL
-            if (Array.isArray(leadersData) && leaderName) {
-              const existingLeader = leadersData.find(
-                (leader: Leader) => leader.name === leaderName
-              );
-              if (existingLeader) {
-                setCurrentLeader(existingLeader);
-              } else if (currentLeader) {
-                // Leader đã bị xóa → reset
-                setCurrentLeader(null);
-                const url = new URL(window.location.href);
-                url.searchParams.delete('name');
-                window.history.replaceState({}, '', url.toString());
-              }
-            } else if (!Array.isArray(leadersData)) {
-              console.warn('Leaders data is not an array:', leadersData);
-            }
-          } catch (err) {
-            console.error('Error parsing leaders message:', err);
+    // Setup WebSocket connection
+    const wsClient = new WebSocketClient(
+      (leaders) => {
+        console.log('📥 Received leaders update:', leaders);
+        // Find current leader by name from URL
+        if (Array.isArray(leaders) && leaderName) {
+          const existingLeader = leaders.find(
+            (leader: Leader) => leader.name === leaderName
+          );
+          if (existingLeader) {
+            setCurrentLeader(existingLeader);
+          } else if (currentLeader) {
+            // Leader đã bị xóa → reset
+            setCurrentLeader(null);
+            const url = new URL(window.location.href);
+            url.searchParams.delete('name');
+            window.history.replaceState({}, '', url.toString());
           }
-        });
-
-        client.subscribe('/topic/parts', (message) => {
-          try {
-            const parts = JSON.parse(message.body);
-            if (Array.isArray(parts)) {
-              const activePartFound = parts.find((p: Part) => p.active);
-              setActivePart(activePartFound || null);
-            } else {
-              console.warn('Parts data is not an array:', parts);
-            }
-          } catch (err) {
-            console.error('Error parsing parts message:', err);
-          }
-        });
+        }
       },
-      onStompError: (frame) => {
-        console.error('STOMP error:', frame);
-        // Don't set error state for WebSocket failures
+      (parts) => {
+        console.log('📥 Received parts update:', parts);
+        const activePartFound = parts.find((p: Part) => p.active);
+        setActivePart(activePartFound || null);
       },
-      onWebSocketClose: () => {
-        console.log('❌ WebSocket disconnected');
+      (activePart) => {
+        console.log('📥 Received active part update:', activePart);
+        setActivePart(activePart);
       }
-    });
+    );
 
-    client.activate();
+    wsClient.connect();
 
     return () => {
       clearTimeout(loadingTimeout);
-      client.deactivate();
+      wsClient.disconnect();
     };
   }, [leaderName]);
 
