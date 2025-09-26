@@ -1,6 +1,7 @@
 import { Leader, Part, TodoItem } from './data';
+import { CONFIG } from './config';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
+const API_BASE = CONFIG.API_URL;
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) {

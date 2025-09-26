@@ -3,7 +3,8 @@ const { parse } = require('url');
 const next = require('next');
 const { WebSocketServer } = require('ws');
 
-// Initialize database - we'll create a simple in-memory database here
+// Initialize database     this.activePartId = null;
+    console.log('✅ Reset system hoàn thành!');
 global.db = {
   leaders: new Map(),
   parts: new Map(),
@@ -152,10 +153,13 @@ global.db = {
   resetSystem() {
     console.log('🔄 Bắt đầu reset system...');
     
+    // Log current state before reset
+    console.log(`📊 Current state: ${this.leaders.size} leaders, ${this.parts.size} parts, ${this.wsClients?.size || 0} connected clients`);
+    
     // Reset tất cả leaders về trạng thái chưa hoàn thành
     console.log(`📊 Resetting ${this.leaders.size} leaders...`);
     this.leaders.forEach((leader, id) => {
-      console.log(`  - Resetting leader: ${leader.name} (${id})`);
+      console.log(`  - Resetting leader: ${leader.name} (${id}) - was completed: ${leader.completed}`);
       leader.completed = false;
       leader.needsHelp = false;
       leader.todoList = []; // Reset todo list của leader
@@ -165,7 +169,7 @@ global.db = {
     // Reset tất cả parts về trạng thái không active và reset todos
     console.log(`📋 Resetting ${this.parts.size} parts...`);
     this.parts.forEach((part, id) => {
-      console.log(`  - Resetting part: ${part.name} (${id})`);
+      console.log(`  - Resetting part: ${part.name} (${id}) - was active: ${part.active}`);
       part.active = false;
       part.todoList.forEach(todo => {
         todo.completed = false;
@@ -174,6 +178,28 @@ global.db = {
     });
 
     this.activePartId = null;
+    
+    // Broadcast SYSTEM_RESET message to all clients FIRST
+    console.log(`� Broadcasting SYSTEM_RESET to ${this.wsClients?.size || 0} clients...`);
+    if (this.wsClients) {
+      this.wsClients.forEach(ws => {
+        if (ws.readyState === 1) { // WebSocket.OPEN = 1
+          try {
+            ws.send(JSON.stringify({ 
+              type: 'SYSTEM_RESET', 
+              data: { 
+                message: 'Hệ thống đã được reset - đang tự động làm mới dữ liệu...',
+                timestamp: Date.now() 
+              } 
+            }));
+            console.log('📤 Sent SYSTEM_RESET message to client');
+          } catch (error) {
+            console.error('❌ Error sending SYSTEM_RESET:', error);
+          }
+        }
+      });
+    }
+    
     console.log('✅ Reset system hoàn thành!');
     return 'Hệ thống đã được reset thành công';
   },
@@ -215,20 +241,39 @@ global.db = {
         leadersDetails: leaders.map(l => ({ name: l.name, completed: l.completed, needsHelp: l.needsHelp }))
       });
       
+      let sentCount = 0;
+      let failedCount = 0;
+      
       global.wsClients.forEach(ws => {
         if (ws.readyState === WebSocket.OPEN) {
-          // Send leaders data
-          ws.send(JSON.stringify(leaders));
-          // Send parts data  
-          ws.send(JSON.stringify(parts));
-          // Send active part update
-          if (activePart) {
-            ws.send(JSON.stringify({ type: 'ACTIVE_PART', data: activePart }));
-          } else {
-            ws.send(JSON.stringify({ type: 'ACTIVE_PART', data: null }));
+          try {
+            // Send leaders data
+            ws.send(JSON.stringify(leaders));
+            // Send parts data  
+            ws.send(JSON.stringify(parts));
+            // Send active part update
+            if (activePart) {
+              ws.send(JSON.stringify({ type: 'ACTIVE_PART', data: activePart }));
+            } else {
+              ws.send(JSON.stringify({ type: 'ACTIVE_PART', data: null }));
+            }
+            // Send a special reset notification for mobile clients
+            ws.send(JSON.stringify({ type: 'SYSTEM_RESET', timestamp: Date.now() }));
+            sentCount++;
+          } catch (error) {
+            console.error('❌ Failed to send to client:', error);
+            failedCount++;
+            // Remove failed connection
+            global.wsClients.delete(ws);
           }
+        } else {
+          failedCount++;
+          // Remove disconnected client
+          global.wsClients.delete(ws);
         }
       });
+      
+      console.log(`📤 Broadcast completed: ${sentCount} successful, ${failedCount} failed`);
     }
   }
 };
@@ -275,6 +320,19 @@ app.prepare().then(() => {
     if (activePart) {
       ws.send(JSON.stringify({ type: 'ACTIVE_PART', data: activePart }));
     }
+
+    // Handle incoming messages (ping/pong)
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        if (message.type === 'ping') {
+          // Respond with pong
+          ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    });
 
     ws.on('close', () => {
       console.log('WebSocket client disconnected');

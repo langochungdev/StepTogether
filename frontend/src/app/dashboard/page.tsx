@@ -11,6 +11,7 @@ import { WebSocketClient } from '../../lib/websocket-client';
 export default function DashboardPage() {
   const [leaders, setLeaders] = useState<Leader[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activePart, setActivePart] = useState<Part | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -112,7 +113,6 @@ export default function DashboardPage() {
             <DashboardTable 
               leaders={leaders} 
               onLeaderDeleted={handleLeaderDeleted}
-              activePart={activePart}
             />
           </div>
 

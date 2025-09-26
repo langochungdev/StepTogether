@@ -13,7 +13,14 @@ declare global {
     toggleLeaderTodo(id: string, todoId: string): Leader | null;
     getParts(): Part[];
     getActivePart(): Part | null;
+    createPart(name: string, description: string, todoList: TodoItem[]): Part;
+    updatePart(id: string, name: string, description: string, todoList: TodoItem[]): Part | null;
+    deletePart(id: string): Part | null;
+    activatePart(id: string): Part | null;
+    toggleTodoCompletion(partId: string, todoId: string): Part | null;
     broadcastAllData(): void;
+    resetSystem(): string;
+    getSystemStats(): unknown;
   };
 }
 

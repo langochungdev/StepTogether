@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 // POST /api/parts/[id]/activate - Kích hoạt part
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
-    const activatedPart = (global as any).db.activatePart(id);
+    const { id } = await params;
+    const activatedPart = global.db.activatePart(id);
     if (!activatedPart) {
       return NextResponse.json(
         { success: false, error: 'Không tìm thấy part' },
@@ -16,10 +16,10 @@ export async function POST(
     }
 
     // Broadcast update via WebSocket
-    (global as any).db.broadcastAllData();
+    global.db.broadcastAllData();
     
     return NextResponse.json({ success: true, data: activatedPart });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Có lỗi khi kích hoạt part' },
       { status: 500 }

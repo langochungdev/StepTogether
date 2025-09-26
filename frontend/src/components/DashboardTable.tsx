@@ -1,15 +1,14 @@
 'use client';
 
-import { Leader, Part } from '../lib/data';
+import { Leader } from '../lib/data';
 import DeleteButton from './DeleteButton';
 
 interface DashboardTableProps {
   leaders: Leader[];
   onLeaderDeleted: (deletedLeader: Leader) => void;
-  activePart?: Part | null;
 }
 
-export default function DashboardTable({ leaders, onLeaderDeleted, activePart }: DashboardTableProps) {
+export default function DashboardTable({ leaders, onLeaderDeleted }: DashboardTableProps) {
   const pendingLeaders = leaders.filter(leader => !leader.completed);
   const doneLeaders = leaders.filter(leader => leader.completed);
 

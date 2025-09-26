@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 // GET /api/parts - Lấy danh sách tất cả parts
 export async function GET() {
   try {
-    const parts = (global as any).db.getParts();
+    const parts = global.db.getParts();
     return NextResponse.json({ success: true, data: parts });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Có lỗi khi lấy danh sách parts' },
       { status: 500 }
@@ -26,13 +26,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newPart = (global as any).db.createPart(name.trim(), description || '', todoList || []);
+    const newPart = global.db.createPart(name.trim(), description || '', todoList || []);
     
     // Broadcast update via WebSocket
-    (global as any).db.broadcastAllData();
+    global.db.broadcastAllData();
     
     return NextResponse.json({ success: true, data: newPart });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Có lỗi khi tạo part' },
       { status: 500 }

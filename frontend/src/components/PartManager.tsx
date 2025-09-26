@@ -2,23 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { getParts, activatePart } from '../lib/api';
-import { Part, TodoItem } from '../lib/data';
+import { Part } from '../lib/data';
 
 interface PartManagerProps {
   onPartActivated?: (part: Part) => void;
-  onPartsUpdated?: () => void;
 }
 
-export default function PartManager({ onPartActivated, onPartsUpdated }: PartManagerProps) {
+export default function PartManager({ onPartActivated }: PartManagerProps) {
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingPart, setEditingPart] = useState<Part | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    todos: [{ id: '', title: '', description: '', completed: false }]
-  });
 
   useEffect(() => {
     fetchParts();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import LeaderForm from '../../components/LeaderForm';
 import LeaderButton from '../../components/LeaderButton';
@@ -15,8 +15,61 @@ function LeaderPageContent() {
   const [activePart, setActivePart] = useState<Part | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [displaySyncTime, setDisplaySyncTime] = useState<number>(0);
+  const lastSyncTimeRef = useRef<number>(0);
+  const currentLeaderRef = useRef<Leader | null>(null);
   const searchParams = useSearchParams();
   const leaderName = searchParams.get('name');
+
+  // Update display sync time periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (lastSyncTimeRef.current > 0) {
+        setDisplaySyncTime(lastSyncTimeRef.current);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update ref when currentLeader changes
+  useEffect(() => {
+    currentLeaderRef.current = currentLeader;
+  }, [currentLeader]);
+
+  // Force data refresh function for mobile fallback
+  const forceDataRefresh = useCallback(async () => {
+    console.log('🔄 Force refreshing data...');
+    try {
+      const [leadersData, activePartData] = await Promise.all([
+        getLeaders(),
+        getActivePart()
+      ]);
+      
+      // Find current leader by name from URL
+      if (leaderName) {
+        const existingLeader = leadersData.find(
+          (leader: Leader) => leader.name === leaderName
+        );
+        if (existingLeader) {
+          setCurrentLeader(existingLeader);
+        } else if (currentLeaderRef.current) {
+          // Leader đã bị xóa → reset
+          setCurrentLeader(null);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('name');
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+      
+      setActivePart(activePartData);
+      setError('');
+      lastSyncTimeRef.current = Date.now();
+      console.log('✅ Force data refresh completed');
+    } catch (err) {
+      console.error('❌ Force data refresh failed:', err);
+      setError(err instanceof Error ? err.message : 'Có lỗi khi tải dữ liệu');
+    }
+  }, [leaderName]);
 
   useEffect(() => {
     // Set loading timeout to prevent infinite loading
@@ -50,6 +103,7 @@ function LeaderPageContent() {
         setActivePart(activePartData);
         setError('');
         setLoading(false);
+        lastSyncTimeRef.current = Date.now();
       } catch (err) {
         clearTimeout(loadingTimeout);
         setError(err instanceof Error ? err.message : 'Có lỗi khi tải dữ liệu');
@@ -63,6 +117,7 @@ function LeaderPageContent() {
     const wsClient = new WebSocketClient(
       (leaders) => {
         console.log('📥 Received leaders update:', leaders);
+        lastSyncTimeRef.current = Date.now();
         // Find current leader by name from URL
         if (Array.isArray(leaders) && leaderName) {
           const existingLeader = leaders.find(
@@ -70,7 +125,7 @@ function LeaderPageContent() {
           );
           if (existingLeader) {
             setCurrentLeader(existingLeader);
-          } else if (currentLeader) {
+          } else if (currentLeaderRef.current) {
             // Leader đã bị xóa → reset
             setCurrentLeader(null);
             const url = new URL(window.location.href);
@@ -81,22 +136,45 @@ function LeaderPageContent() {
       },
       (parts) => {
         console.log('📥 Received parts update:', parts);
+        lastSyncTimeRef.current = Date.now();
         const activePartFound = parts.find((p: Part) => p.active);
         setActivePart(activePartFound || null);
       },
       (activePart) => {
         console.log('📥 Received active part update:', activePart);
+        lastSyncTimeRef.current = Date.now();
         setActivePart(activePart);
-      }
+      },
+      forceDataRefresh // Add force refresh callback for mobile
     );
 
     wsClient.connect();
 
+    // Add touch/click listener for mobile interaction detection
+    const handleUserInteraction = () => {
+      const timeSinceLastSync = Date.now() - lastSyncTimeRef.current;
+      // If more than 10 seconds since last sync and we have user interaction, force refresh
+      if (timeSinceLastSync > 10000) {
+        console.log('🔄 User interaction detected, checking for updates...');
+        forceDataRefresh().catch(console.error);
+      }
+    };
+
+    // Add event listeners for user interaction
+    const events = ['touchstart', 'click', 'focus'];
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { passive: true });
+    });
+
     return () => {
       clearTimeout(loadingTimeout);
       wsClient.disconnect();
+      // Remove event listeners
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
     };
-  }, [leaderName]);
+  }, [leaderName, forceDataRefresh]);
 
   const handleLeaderRegistered = (leader: Leader) => {
     setCurrentLeader(leader);
@@ -107,6 +185,7 @@ function LeaderPageContent() {
 
   const handleLeaderCompleted = (leader: Leader) => {
     setCurrentLeader(leader);
+    lastSyncTimeRef.current = Date.now();
   };
 
   const handleHelpToggled = (leader: Leader) => {
@@ -120,6 +199,43 @@ function LeaderPageContent() {
       // ActivePart sẽ được cập nhật từ sự kiện PARTS_UPDATE qua WS.
     } catch (err) {
       console.error('Error toggling todo:', err);
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    console.log('🔄 Manual refresh triggered');
+    setLoading(true);
+    try {
+      const [leadersData, activePartData] = await Promise.all([
+        getLeaders(),
+        getActivePart()
+      ]);
+      
+      // Find current leader by name from URL
+      if (leaderName) {
+        const existingLeader = leadersData.find(
+          (leader: Leader) => leader.name === leaderName
+        );
+        if (existingLeader) {
+          setCurrentLeader(existingLeader);
+        } else if (currentLeader) {
+          // Leader đã bị xóa → reset
+          setCurrentLeader(null);
+          const url = new URL(window.location.href);
+          url.searchParams.delete('name');
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+      
+      setActivePart(activePartData);
+      setError('');
+      lastSyncTimeRef.current = Date.now();
+      console.log('✅ Manual refresh completed');
+    } catch (err) {
+      console.error('❌ Manual refresh failed:', err);
+      setError(err instanceof Error ? err.message : 'Có lỗi khi tải dữ liệu');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -145,6 +261,25 @@ function LeaderPageContent() {
           <p className="text-gray-600">
             Đăng ký và theo dõi tiến trình hoàn thành nhiệm vụ
           </p>
+          {/* Sync status indicator */}
+          {displaySyncTime > 0 && (
+            <div className="text-xs text-gray-500 mt-2 flex items-center justify-center gap-2">
+              <span>
+                Cập nhật lần cuối: {new Date(displaySyncTime).toLocaleTimeString('vi-VN')}
+                {Date.now() - displaySyncTime > 30000 && (
+                  <span className="text-orange-600 ml-2">⚠️ Có thể chưa được đồng bộ</span>
+                )}
+              </span>
+              <button
+                onClick={handleManualRefresh}
+                disabled={loading}
+                className="text-blue-600 hover:text-blue-800 underline text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Làm mới dữ liệu"
+              >
+                🔄 Làm mới
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ✅ Hiển thị lỗi nếu có */}

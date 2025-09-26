@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getParts, activatePart, createPart, updatePart, deletePart } from '../lib/api';
+import { useState } from 'react';
+import { activatePart, createPart, updatePart, deletePart } from '../lib/api';
 import { Part } from '../lib/data';
 
 interface PartManagerAdvancedProps {
