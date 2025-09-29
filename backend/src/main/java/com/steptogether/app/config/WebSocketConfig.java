@@ -21,7 +21,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             frontendUrl = "http://localhost:3000"; // Default for development
         }
         registry.addEndpoint("/ws/updates")
+<<<<<<< HEAD
                 .setAllowedOrigins(frontendUrl)
                 .withSockJS();
+=======
+                .setAllowedOriginPatterns("http://localhost:3000", "https://step-together.vercel.app");
+>>>>>>> 3d98cc74dadfd38b5ef48d7eed376a7d8fe7e59c
     }
 }
